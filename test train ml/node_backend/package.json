@@ -1,0 +1,16 @@
+{
+  "name": "node-backend",
+  "version": "1.0.0",
+  "description": "Auscura Node.js backend – receives audio, forwards to AI service",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "busboy": "^1.6.0",
+    "form-data": "^4.0.0",
+    "ws": "^8.16.0"
+  }
+}
