@@ -12,7 +12,7 @@ CLASS_DETAILS = {
         'type': 'Vesicular (Normal)',
         'description': 'เสียงหายใจปกติ นุ่ม ต่อเนื่อง',
         'severity': 'Good',
-        'recommendation': 'โดยรวมเสียงอยู่ในเกณฑ์ปกติค่ะ',
+        'recommendation': 'เสียงปอดคุณปกติ (Vescular) ไม่มีความเสี่ยงโรคปอด',
         'clinical_note': 'โดยทั่วไปไม่ชี้โรค',
         'freq_range': [100, 500]
     },
@@ -20,7 +20,7 @@ CLASS_DETAILS = {
         'type': 'Normal',
         'description': 'ไม่พบเสียงผิดปกติเด่น',
         'severity': 'Good',
-        'recommendation': 'ยังไม่พบเสียงผิดปกติเด่นชัดค่ะ',
+        'recommendation': 'เสียงปอดคุณปกติ (Normal) ไม่มีความเสี่ยงโรคปอด',
         'clinical_note': 'โดยทั่วไปไม่ชี้โรค',
         'freq_range': [100, 1000]
     },
@@ -28,7 +28,7 @@ CLASS_DETAILS = {
         'type': 'Bronchial',
         'description': 'เสียงแข็ง/ชัดกว่าปกติ (pattern เปลี่ยน)',
         'severity': 'Warning',
-        'recommendation': 'พบรูปแบบเสียงที่ต่างจากปกติ แนะนำติดตาม/ประเมินเพิ่มเติมนะคะ',
+        'recommendation': 'เสียงปอดคุณมีแนวโน้มผิดปกติเล็กน้อย (Bronchial) มีความเสี่ยงเป็น ภาวะปอดทึบ/อักเสบ',
         'clinical_note': 'ภาวะปอดทึบ/ปอดอักเสบ (consolidation) (ตัวอย่าง: pneumonia)',
         'freq_range': [200, 2000]
     },
@@ -36,7 +36,7 @@ CLASS_DETAILS = {
         'type': 'Stridor',
         'description': 'เสียงแหลมดัง มักเด่นช่วงหายใจเข้า (upper airway)',
         'severity': 'Bad',
-        'recommendation': 'พบเสียงแหลมคล้ายอุดกั้นทางเดินหายใจส่วนบน แนะนำให้พบแพทย์/ผู้เชี่ยวชาญโดยเร็วค่ะ',
+        'recommendation': 'เสียงปอดของคุณผิดปกติ (Stridor) มีความเสี่ยงเป็น croup/สิ่งแปลกปลอม/บวมกล่องเสียง (อาการ: หายใจลำบาก)',
         'clinical_note': 'อุดกั้นทางเดินหายใจส่วนบน เช่น croup/สิ่งแปลกปลอม/บวมกล่องเสียง',
         'freq_range': [500, 3000]
     },
@@ -44,7 +44,7 @@ CLASS_DETAILS = {
         'type': 'Wheeze',
         'description': 'เสียงหวีดต่อเนื่อง (continuous, musical)',
         'severity': 'Warning',
-        'recommendation': 'พบเสียงหวีดค่ะ อาจเกี่ยวกับหลอดลมตีบ แนะนำสังเกตอาการและประเมินเพิ่มเติม',
+        'recommendation': 'เสียงปอดคุณมีแนวโน้มผิดปกติเล็กน้อย (Wheeze) มีความเสี่ยงเป็นโรคหลอดลมตีบ',
         'clinical_note': 'โรค/อาการกลุ่มหลอดลมตีบ เช่น Asthma, COPD, หลอดลมอักเสบ (bronchitis)',
         'freq_range': [400, 1600]
     },
@@ -52,7 +52,7 @@ CLASS_DETAILS = {
         'type': 'Rhonchi',
         'description': 'เสียงต่ำครืดคราดต่อเนื่อง คล้ายเสมหะ/อุดกั้น',
         'severity': 'Warning',
-        'recommendation': 'พบเสียงครืดคราดค่ะ อาจมีเสมหะ/การอุดกั้น แนะนำประเมินเพิ่มเติม',
+        'recommendation': 'เสียงปอดคุณมีแนวโน้มผิดปกติเล็กน้อ (Rhonchi) มีความเสี่ยงเป็น หลอดลมอักเสบ (bronchitis), COPD, ภาวะมีเสมหะ (อาการ: ไอมีเสมหะ)',
         'clinical_note': 'หลอดลมอักเสบ (bronchitis), COPD, ภาวะมีเสมหะ',
         'freq_range': [50, 300]
     },
