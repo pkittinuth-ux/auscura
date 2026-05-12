@@ -80,8 +80,20 @@ const Analyzing = () => {
         }
       }
 
-      const routeMap: Record<number, string> = { 0: "good", 1: "warning", 2: "bad" };
-      const route = worstRank >= 0 ? routeMap[worstRank] : "error";
+      // Find the best label to represent the overall result (the one with the worst severity)
+      let worstLabel = "A";
+      for (const r of results) {
+        if (r.prediction) {
+          const rank = ranks[r.prediction.severity] ?? 0;
+          if (rank === worstRank) {
+            worstLabel = r.prediction.label;
+            break; 
+          }
+        }
+      }
+
+      // Normalize label (e.g., "E+F" -> "E + F") to match Result.tsx config keys
+      const route = worstRank >= 0 ? worstLabel.replace(/\+/g, " + ") : "error";
 
       setTimeout(() => {
         if (!cancelled) navigate(`/result/${route}`);

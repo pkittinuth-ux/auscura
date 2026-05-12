@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import ChestDiagram from "@/components/ChestDiagram";
-import { Mic, Upload, CheckCircle, Wifi, WifiOff } from "lucide-react";
+import { Mic, Upload, CheckCircle, Wifi, Loader2 } from "lucide-react";
 import { saveStepFile, clearSession } from "@/lib/aiService";
 
 const positions = [
@@ -14,6 +14,7 @@ const positions = [
 
 const TOTAL_STEPS = 4;
 const RECORD_SECONDS = 5;
+const ESP32_URL = "http://192.168.1.100"; // ESP32 default IP
 
 const Recording = () => {
   const { step = "0" } = useParams();
@@ -24,6 +25,8 @@ const Recording = () => {
   const [count, setCount] = useState(RECORD_SECONDS);
   const [fileReady, setFileReady] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [mode, setMode] = useState<"idle" | "uploading" | "esp32">("idle");
+  const [esp32Recording, setEsp32Recording] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Clear session only on the very first step
@@ -36,8 +39,18 @@ const Recording = () => {
     setCount(RECORD_SECONDS);
     setFileReady(false);
     setFileName("");
+    setMode("idle");
+    setEsp32Recording(false);
     if (timerRef.current) clearInterval(timerRef.current);
-  }, [idx]);
+
+    // Check if we already have a file for this step
+    const raw = sessionStorage.getItem('auscura_session');
+    const session: Record<number, { url: string; name: string }> = raw ? JSON.parse(raw) : {};
+    if (session[idx]) {
+      // Already have file, go to analyzing immediately
+      setTimeout(() => navigate("/analyzing"), 100);
+    }
+  }, [idx, navigate]);
 
   // Auto-advance countdown after file is ready
   useEffect(() => {
@@ -47,10 +60,7 @@ const Recording = () => {
       setCount((c) => {
         if (c <= 1) {
           clearInterval(timerRef.current!);
-          setTimeout(() => {
-            if (idx < TOTAL_STEPS - 1) navigate(`/recording/${idx + 1}`);
-            else navigate("/analyzing");
-          }, 400);
+          setTimeout(() => navigate("/analyzing"), 400);
           return 0;
         }
         return c - 1;
@@ -68,11 +78,41 @@ const Recording = () => {
     }
     saveStepFile(idx, file, file.name);
     setFileName(file.name);
+    setMode("uploading");
     setFileReady(true);
   };
 
+  const handleEsp32Record = async () => {
+    setMode("esp32");
+    setEsp32Recording(true);
+
+    try {
+      // Request ESP32 to record for RECORD_SECONDS
+      const response = await fetch(`${ESP32_URL}/record`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ duration: RECORD_SECONDS, step: idx }),
+      });
+
+      if (!response.ok) throw new Error("ESP32 request failed");
+
+      const data = await response.json();
+      
+      // Simulate WAV file from ESP32 data
+      const wavData = new Blob([data.audio], { type: "audio/wav" });
+      const fileName = `esp32_step${idx}_${Date.now()}.wav`;
+      saveStepFile(idx, wavData, fileName);
+      setFileName(fileName);
+      setFileReady(true);
+    } catch (error) {
+      console.error("ESP32 recording error:", error);
+      alert("ไม่สามารถเชื่อมต่อ ESP32 ได้ โปรดลองใหม่");
+      setMode("idle");
+      setEsp32Recording(false);
+    }
+  };
+
   const progress = fileReady ? ((RECORD_SECONDS - count) / RECORD_SECONDS) * 100 : 0;
-  const circumference = 2 * Math.PI * 90;
 
   return (
     <Layout>
@@ -135,7 +175,7 @@ const Recording = () => {
             </div>
           </div>
 
-          {/* ─── 2 options ─── */}
+          {/* 2 options */}
           {!fileReady ? (
             <div className="w-full max-w-xs space-y-3">
               <p className="text-xs text-center text-muted-foreground font-medium uppercase tracking-widest mb-4">
@@ -145,7 +185,11 @@ const Recording = () => {
               {/* Option 1 — Upload WAV file */}
               <label
                 htmlFor={`wav-upload-${idx}`}
-                className="flex items-center gap-4 w-full p-4 rounded-2xl border-2 border-primary/40 hover:border-primary bg-card hover:bg-primary/5 cursor-pointer transition-all group"
+                className={`flex items-center gap-4 w-full p-4 rounded-2xl border-2 transition-all group ${
+                  mode === "uploading"
+                    ? "border-primary bg-primary/5"
+                    : "border-primary/40 hover:border-primary bg-card hover:bg-primary/5 cursor-pointer"
+                }`}
               >
                 <div className="w-10 h-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center flex-shrink-0 transition-colors">
                   <Upload className="w-5 h-5 text-primary" />
@@ -160,24 +204,33 @@ const Recording = () => {
                   accept=".wav"
                   className="hidden"
                   onChange={handleFileChange}
+                  disabled={mode === "esp32"}
                 />
               </label>
 
-              {/* Option 2 — ESP32 Record (disabled / coming soon) */}
+              {/* Option 2 — ESP32 Record */}
               <button
-                disabled
-                className="flex items-center gap-4 w-full p-4 rounded-2xl border-2 border-dashed border-border bg-muted/30 cursor-not-allowed opacity-60"
+                onClick={handleEsp32Record}
+                disabled={esp32Recording}
+                className={`flex items-center gap-4 w-full p-4 rounded-2xl border-2 transition-all ${
+                  esp32Recording
+                    ? "border-primary bg-primary/5 cursor-wait"
+                    : "border-primary/40 hover:border-primary bg-card hover:bg-primary/5 cursor-pointer"
+                }`}
               >
-                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-                  <WifiOff className="w-5 h-5 text-muted-foreground" />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+                  esp32Recording ? "bg-primary/20" : "bg-primary/10 group-hover:bg-primary/20"
+                }`}>
+                  {esp32Recording ? (
+                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                  ) : (
+                    <Wifi className="w-5 h-5 text-primary" />
+                  )}
                 </div>
                 <div className="text-left">
                   <p className="font-semibold text-sm text-foreground">บันทึกจาก ESP32</p>
-                  <p className="text-xs text-muted-foreground">ยังไม่ได้เชื่อมต่ออุปกรณ์</p>
+                  <p className="text-xs text-muted-foreground">เชื่อมต่ออุปกรณ์ผ่าน Wi-Fi</p>
                 </div>
-                <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground uppercase tracking-wider">
-                  Coming Soon
-                </span>
               </button>
             </div>
           ) : (
@@ -188,9 +241,7 @@ const Recording = () => {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-success truncate">{fileName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {idx < TOTAL_STEPS - 1
-                      ? `ไปขั้นตอนถัดไปใน ${count}s`
-                      : `เริ่มวิเคราะห์ใน ${count}s`}
+                    เริ่มวิเคราะห์ใน ${count}s
                   </p>
                 </div>
               </div>
@@ -198,7 +249,7 @@ const Recording = () => {
               <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/30 border border-border/50">
                 <Wifi className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">
-                  ขั้นตอน {idx + 1} / {TOTAL_STEPS} · {pos.code}
+                  ขั้นตอน {idx + 1} / {TOTAL_STEPS} · {pos.code} · {mode === "uploading" ? "WAV" : "ESP32"}
                 </span>
               </div>
             </div>

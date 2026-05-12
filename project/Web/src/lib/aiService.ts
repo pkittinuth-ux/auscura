@@ -61,7 +61,10 @@ export function saveStepFile(step: number, file: File | Blob, name: string) {
   const url = URL.createObjectURL(file);
   const raw = sessionStorage.getItem(SESSION_KEY);
   const session: Record<number, { url: string; name: string }> = raw ? JSON.parse(raw) : {};
-  session[step] = { url, name };
+  // Save for all remaining steps (including current)
+  for (let i = step; i < 4; i++) {
+    session[i] = { url, name };
+  }
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
