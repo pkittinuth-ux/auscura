@@ -71,6 +71,7 @@ export function saveStepFile(step: number, file: File | Blob, name: string) {
 export function clearSession() {
   sessionStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem('auscura_results');
+  sessionStorage.removeItem('esp32_auto_mode');
 }
 
 export function saveResults(results: StepResult[]) {

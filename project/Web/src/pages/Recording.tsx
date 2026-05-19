@@ -13,7 +13,7 @@ const positions = [
 ];
 
 const TOTAL_STEPS = 4;
-const RECORD_SECONDS = 5;
+const RECORD_SECONDS = 20;
 const ESP32_URL = "http://192.168.1.100"; // ESP32 default IP
 
 const Recording = () => {
@@ -46,11 +46,27 @@ const Recording = () => {
     // Check if we already have a file for this step
     const raw = sessionStorage.getItem('auscura_session');
     const session: Record<number, { url: string; name: string }> = raw ? JSON.parse(raw) : {};
-    if (session[idx]) {
-      // Already have file, go to analyzing immediately
+
+    // If we are in auto mode, don't auto-navigate away, just proceed
+    const isAuto = sessionStorage.getItem("esp32_auto_mode") === "true";
+
+    if (session[idx] && !isAuto) {
+      // Already have file and not in auto mode, go to analyzing
       setTimeout(() => navigate("/analyzing"), 100);
     }
   }, [idx, navigate]);
+
+  // Auto-start next step if in ESP32 auto mode
+  useEffect(() => {
+    const isAuto = sessionStorage.getItem("esp32_auto_mode") === "true";
+    if (isAuto && !fileReady && mode === "idle") {
+      // Small delay to let the UI breathe before starting next step
+      const t = setTimeout(() => {
+        handleEsp32Record();
+      }, 2000);
+      return () => clearTimeout(t);
+    }
+  }, [idx, fileReady, mode]);
 
   // Auto-advance countdown after file is ready
   useEffect(() => {
@@ -60,7 +76,16 @@ const Recording = () => {
       setCount((c) => {
         if (c <= 1) {
           clearInterval(timerRef.current!);
-          setTimeout(() => navigate("/analyzing"), 400);
+
+          // Determine next destination
+          if (idx < TOTAL_STEPS - 1) {
+            // Move to next step (record/0 -> record/1 -> ...)
+            setTimeout(() => navigate(`/recording/${idx + 1}`), 600);
+          } else {
+            // All steps done, clear auto mode and go to analyzing
+            sessionStorage.removeItem("esp32_auto_mode");
+            setTimeout(() => navigate("/analyzing"), 800);
+          }
           return 0;
         }
         return c - 1;
@@ -85,30 +110,30 @@ const Recording = () => {
   const handleEsp32Record = async () => {
     setMode("esp32");
     setEsp32Recording(true);
+    sessionStorage.setItem("esp32_auto_mode", "true");
 
     try {
-      // Request ESP32 to record for RECORD_SECONDS
-      const response = await fetch(`${ESP32_URL}/record`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ duration: RECORD_SECONDS, step: idx }),
-      });
+      // Signal ESP32 to start recording (Displaying start signal)
+      console.log(`Signaling ESP32 to start step ${idx}`);
 
-      if (!response.ok) throw new Error("ESP32 request failed");
+      // Sending signal via simple fetch. User will handle ESP32 side logic.
+      // We use no-cors to avoid issues with ESP32 local server restrictions.
+      await fetch(`${ESP32_URL}/start?step=${idx}`, { mode: 'no-cors' });
 
-      const data = await response.json();
-      
-      // Simulate WAV file from ESP32 data
-      const wavData = new Blob([data.audio], { type: "audio/wav" });
-      const fileName = `esp32_step${idx}_${Date.now()}.wav`;
-      saveStepFile(idx, wavData, fileName);
-      setFileName(fileName);
+      // Save a placeholder step file so the analysis page knows we have data for this step.
+      // The actual audio processing/storage might be handled by ESP32 -> Backend directly.
+      const mockBlob = new Blob(["esp32-stream-data"], { type: "audio/wav" });
+      const name = `esp32_step${idx}.wav`;
+      saveStepFile(idx, mockBlob, name);
+
+      setFileName(`record/${idx}`);
       setFileReady(true);
     } catch (error) {
-      console.error("ESP32 recording error:", error);
-      alert("ไม่สามารถเชื่อมต่อ ESP32 ได้ โปรดลองใหม่");
+      console.error("ESP32 signal error:", error);
+      alert("ไม่สามารถส่งสัญญาณไปที่ ESP32 ได้ กรุณาตรวจสอบการเชื่อมต่อ Wi-Fi");
       setMode("idle");
       setEsp32Recording(false);
+      sessionStorage.removeItem("esp32_auto_mode");
     }
   };
 
@@ -122,16 +147,15 @@ const Recording = () => {
           {fileReady ? "กำลังบันทึก" : "รอไฟล์เสียง"}
         </div>
         <h1 className="text-5xl font-bold mb-2">{pos.title}: {pos.desc}</h1>
-        <p className="text-lg text-muted-foreground">หายใจลึกๆ 2 ครั้ง · รหัส {pos.code}</p>
+        <p className="text-lg text-muted-foreground">หายใจลึกๆ 2 ครั้ง · record/{idx} · รหัส {pos.code}</p>
 
         {/* Step progress dots */}
         <div className="flex items-center justify-center gap-2 mt-6">
           {positions.map((p, i) => (
             <div
               key={p.code}
-              className={`h-1.5 rounded-full transition-smooth ${
-                i < idx ? "bg-success w-12" : i === idx ? "bg-primary w-20" : "bg-border w-12"
-              }`}
+              className={`h-1.5 rounded-full transition-smooth ${i < idx ? "bg-success w-12" : i === idx ? "bg-primary w-20" : "bg-border w-12"
+                }`}
             />
           ))}
         </div>
@@ -185,18 +209,17 @@ const Recording = () => {
               {/* Option 1 — Upload WAV file */}
               <label
                 htmlFor={`wav-upload-${idx}`}
-                className={`flex items-center gap-4 w-full p-4 rounded-2xl border-2 transition-all group ${
-                  mode === "uploading"
-                    ? "border-primary bg-primary/5"
-                    : "border-primary/40 hover:border-primary bg-card hover:bg-primary/5 cursor-pointer"
-                }`}
+                className={`flex items-center gap-4 w-full p-4 rounded-2xl border-2 transition-all group ${mode === "uploading"
+                  ? "border-primary bg-primary/5"
+                  : "border-primary/40 hover:border-primary bg-card hover:bg-primary/5 cursor-pointer"
+                  }`}
               >
                 <div className="w-10 h-10 rounded-xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center flex-shrink-0 transition-colors">
                   <Upload className="w-5 h-5 text-primary" />
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-sm text-foreground">เลือกไฟล์ .wav</p>
-                  <p className="text-xs text-muted-foreground">อัปโหลดจากเครื่อง</p>
+                  <p className="font-semibold text-sm text-foreground">เลือกไฟล์เสียงตัวอย่าง</p>
+                  <p className="text-xs text-muted-foreground">รองรับไฟล์ .wav</p>
                 </div>
                 <input
                   id={`wav-upload-${idx}`}
@@ -212,15 +235,13 @@ const Recording = () => {
               <button
                 onClick={handleEsp32Record}
                 disabled={esp32Recording}
-                className={`flex items-center gap-4 w-full p-4 rounded-2xl border-2 transition-all ${
-                  esp32Recording
-                    ? "border-primary bg-primary/5 cursor-wait"
-                    : "border-primary/40 hover:border-primary bg-card hover:bg-primary/5 cursor-pointer"
-                }`}
+                className={`flex items-center gap-4 w-full p-4 rounded-2xl border-2 transition-all ${esp32Recording
+                  ? "border-primary bg-primary/5 cursor-wait"
+                  : "border-primary/40 hover:border-primary bg-card hover:bg-primary/5 cursor-pointer"
+                  }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
-                  esp32Recording ? "bg-primary/20" : "bg-primary/10 group-hover:bg-primary/20"
-                }`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${esp32Recording ? "bg-primary/20" : "bg-primary/10 group-hover:bg-primary/20"
+                  }`}>
                   {esp32Recording ? (
                     <Loader2 className="w-5 h-5 text-primary animate-spin" />
                   ) : (
@@ -228,7 +249,7 @@ const Recording = () => {
                   )}
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-sm text-foreground">บันทึกจาก ESP32</p>
+                  <p className="font-semibold text-sm text-foreground">บันทึกจากสายฟังเสียงปอด</p>
                   <p className="text-xs text-muted-foreground">เชื่อมต่ออุปกรณ์ผ่าน Wi-Fi</p>
                 </div>
               </button>
@@ -250,8 +271,25 @@ const Recording = () => {
                 <Wifi className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">
                   ขั้นตอน {idx + 1} / {TOTAL_STEPS} · {pos.code} · {mode === "uploading" ? "WAV" : "ESP32"}
+                  {sessionStorage.getItem("esp32_auto_mode") === "true" && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold text-[10px]">AUTO</span>
+                  )}
                 </span>
               </div>
+
+              {sessionStorage.getItem("esp32_auto_mode") === "true" && (
+                <button
+                  className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-4"
+                  onClick={() => {
+                    sessionStorage.removeItem("esp32_auto_mode");
+                    setMode("idle");
+                    setEsp32Recording(false);
+                    setFileReady(false);
+                  }}
+                >
+                  ยกเลิกโหมดอัตโนมัติ
+                </button>
+              )}
             </div>
           )}
 

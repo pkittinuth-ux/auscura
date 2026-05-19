@@ -1,6 +1,10 @@
 import librosa
 import numpy as np
 
+# สแกนและแปลงคลื่นเสียงเป็นตัวเลข ทำการคำนวณสกัดคุณสมบัติเชิงลึกของเสียง 
+# เช่น ระดับโทนเสียง (MFCCs), ความถี่เด่นของลมหายใจ (Dominant Frequency), 
+# และพลังงานการสั่นสะเทือนของเสียง (RMS) เพื่อให้โมเดล AI นำไปอ่านเข้าใจได้
+
 def extract_features(y, sr=16000):
     """
     Extracts an enhanced set of features from an audio signal.

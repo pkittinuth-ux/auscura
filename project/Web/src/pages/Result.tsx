@@ -60,7 +60,7 @@ const config: Record<ResultType, {
     Icon: Meh,
     color: "hsl(var(--warning))",
     bg: "bg-warning/10",
-    message: "พบเสียงแตกละเอียดค่ะ แนะนำติดตาม/ตรวจเพิ่มเติมเพื่อความมั่นใจ",
+    message: "เสียงปอดคุณมีแนวโน้มผิดปกติเล็กน้อ (Fine Crackles) มีความเสี่ยงเป็น ภาวะน้ำท่วมปอด/หัวใจล้มเหลว, โรคปอดคั่นระหว่าง, ปอดอักเสบ",
   },
   H: {
     label: "Bad",
@@ -218,6 +218,9 @@ const Result = () => {
   const results: StepResult[] = loadResults();
   const hasRealData = results.length > 0;
 
+  const sessionRaw = typeof window !== "undefined" ? sessionStorage.getItem("auscura_session") : null;
+  const sessionData = sessionRaw ? JSON.parse(sessionRaw) : {};
+
   return (
     <Layout>
       <div className="max-w-3xl mx-auto animate-fade-up">
@@ -265,6 +268,52 @@ const Result = () => {
           )}
         </div>
 
+        {/* Step Results */}
+        {hasRealData && (
+          <div className="mb-8 text-left animate-fade-up" style={{ animationDelay: "0.2s" }}>
+            <h2 className="text-2xl font-bold mb-4 px-2 text-foreground">รายละเอียดเสียงแต่ละจุด</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {results.map((res, i) => {
+                const audioUrl = sessionData[res.step]?.url;
+
+                return (
+                  <div
+                    key={i}
+                    className={`bg-card rounded-2xl p-5 border shadow-sm flex flex-col gap-3 ${
+                      res.prediction ? SEV_BG[res.prediction.severity] : "border-border"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-sm font-semibold text-muted-foreground mb-1">
+                          {STEP_LABELS[res.step] || `จุดที่ ${res.step + 1}`}
+                        </div>
+                        <div className="text-lg font-bold">
+                          {res.prediction ? res.prediction.type : res.error ? "ข้อผิดพลาด" : "ไม่ทราบผล"}
+                        </div>
+                        {res.prediction && (
+                          <div className={`text-sm font-medium ${SEV_COLOR[res.prediction.severity]}`}>
+                            {res.prediction.label}
+                          </div>
+                        )}
+                      </div>
+                      {res.prediction && (
+                        <div className={`p-2 rounded-full ${res.prediction.severity === "Bad" ? "bg-destructive/20 text-destructive" : res.prediction.severity === "Warning" ? "bg-yellow-500/20 text-yellow-500" : "bg-success/20 text-success"}`}>
+                          <Activity className="w-5 h-5" />
+                        </div>
+                      )}
+                    </div>
+                    {audioUrl && (
+                      <div className="mt-2">
+                        <audio controls src={audioUrl} className="w-full h-10" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 text-center">
           <Button

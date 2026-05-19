@@ -9,20 +9,21 @@ interface Row {
   name: string;
   thai: string;
   desc: string;
-  category: "ปกติ" | "ผิดปกติ";
+  category: "GOOD" | "WARNING" | "BAD";
 }
 
 const rows: Row[] = [
-  { key: "vesicular", name: "Vesicular", thai: "เสียงหายใจเข้ายาว-ออกสั้น", desc: "เสียงนุ่มนวลและต่ำ พบได้เกือบพื้นที่ปอดทั้งหมด", category: "ปกติ" },
-  { key: "normal", name: "Normal", thai: "เสียงปกติทั่วไป", desc: "มีความสม่ำเสมอ นุ่มนวล และไม่มีเสียงแทรกซ้อน", category: "ปกติ" },
-  { key: "bronchial", name: "Bronchial", thai: "เสียงหายใจเข้าสั้น-ออกยาว", desc: "เสียงดังแหลมและชัดเจน ได้ยินบริเวณเหนือกระดูกหน้าอก (Sternum) ความถี่สูงกว่า 200 Hz อาจสูงถึง 2,000 Hz", category: "ปกติ" },
-  { key: "stridor", name: "Stridor", thai: "เสียงตีบทางเดินหายใจส่วนบน", desc: "เสียงแหลมสูงจากการตีบแคบของ Larynx หรือ Trachea ได้ยินชัดขณะหายใจเข้า เป็นภาวะอุดกั้นที่อาจอันตรายถึงชีวิต", category: "ผิดปกติ" },
-  { key: "wheezing", name: "Wheezing", thai: "เสียงวี๊ด", desc: "เสียงสูงจากหลอดลมตีบ เช่น โรคหอบหืด", category: "ผิดปกติ" },
-  { key: "rhonchi", name: "Rhonchi", thai: "เสียงครืดคราด", desc: "เสียงต่ำคล้ายมีเสมหะในหลอดลม", category: "ผิดปกติ" },
-  { key: "fineCrackles", name: "Fine Crackles", thai: "เสียงกรอบแกรบเบา", desc: "เสียงแหลมสูงและเบา คล้ายเสียงลอกแถบ Velcro ออกช้าๆ หรือขยี้เส้นผมข้างหู", category: "ผิดปกติ" },
-  { key: "coarseCrackles", name: "Coarse Crackles", thai: "เสียงกรอบแกรบหนัก", desc: "เสียงทุ้มต่ำและดัง คล้ายเสียงฟองอากาศแตก หรือเป่าหลอดลงในน้ำ", category: "ผิดปกติ" },
-  { key: "pleuralRub", name: "Pleural Rub", thai: "เสียงเยื่อหุ้มปอดเสียดสี", desc: "เกิดจากการอักเสบของเยื่อหุ้มปอด ทำให้ผิวขรุขระเสียดสีกันขณะหายใจ", category: "ผิดปกติ" },
-  { key: "squawks", name: "Squawks", thai: "เสียงนกหวีดสั้น", desc: "เสียงแหลมคล้ายเสียงนกหวีดสั้นๆ หรือเสียงฟองอากาศแตกตัว", category: "ผิดปกติ" },
+  { key: "vesicular", name: "Vesicular", thai: "เสียงหายใจเข้ายาว-ออกสั้น", desc: "เสียงนุ่มนวลและต่ำ พบได้เกือบพื้นที่ปอดทั้งหมด", category: "GOOD" },
+  { key: "normal", name: "Normal", thai: "เสียงปกติทั่วไป", desc: "มีความสม่ำเสมอ นุ่มนวล และไม่มีเสียงแทรกซ้อน", category: "GOOD" },
+  { key: "bronchial", name: "Bronchial", thai: "เสียงหายใจเข้าสั้น-ออกยาว", desc: "เสียงดังแหลมและชัดเจน ได้ยินบริเวณเหนือกระดูกหน้าอก (Sternum) ความถี่สูงกว่า 200 Hz อาจสูงถึง 2,000 Hz", category: "WARNING" },
+  { key: "bronchovesicular", name: "Bronchovesicular", thai: "เสียงหายใจเข้า-ออกเท่ากัน", desc: "เสียงปานกลาง ได้ยินบริเวณช่องว่างระหว่างกระดูกสะบัก", category: "WARNING" },
+  { key: "stridor", name: "Stridor", thai: "เสียงตีบทางเดินหายใจส่วนบน", desc: "เสียงแหลมสูงจากการตีบแคบของ Larynx หรือ Trachea ได้ยินชัดขณะหายใจเข้า เป็นภาวะอุดกั้นที่อาจอันตรายถึงชีวิต", category: "BAD" },
+  { key: "wheezing", name: "Wheezing", thai: "เสียงวี๊ด", desc: "เสียงสูงจากหลอดลมตีบ เช่น โรคหอบหืด", category: "WARNING" },
+  { key: "rhonchi", name: "Rhonchi", thai: "เสียงครืดคราด", desc: "เสียงต่ำคล้ายมีเสมหะในหลอดลม", category: "WARNING" },
+  { key: "fineCrackles", name: "Fine Crackles", thai: "เสียงกรอบแกรบเบา", desc: "เสียงแหลมสูงและเบา คล้ายเสียงลอกแถบ Velcro ออกช้าๆ หรือขยี้เส้นผมข้างหู", category: "WARNING" },
+  { key: "coarseCrackles", name: "Coarse Crackles", thai: "เสียงกรอบแกรบหนัก", desc: "เสียงทุ้มต่ำและดัง คล้ายเสียงฟองอากาศแตก หรือเป่าหลอดลงในน้ำ", category: "BAD" },
+  { key: "pleuralRub", name: "Pleural Rub", thai: "เสียงเยื่อหุ้มปอดเสียดสี", desc: "เกิดจากการอักเสบของเยื่อหุ้มปอด ทำให้ผิวขรุขระเสียดสีกันขณะหายใจ", category: "BAD" },
+  { key: "squawks", name: "Squawks", thai: "เสียงนกหวีดสั้น", desc: "เสียงแหลมคล้ายเสียงนกหวีดสั้นๆ หรือเสียงฟองอากาศแตกตัว", category: "WARNING" },
 ];
 
 const Sounds = () => {
@@ -37,13 +38,12 @@ const Sounds = () => {
       return;
     }
     stopFn?.();
-    const stop = playSound(key);
+    const stop = playSound(key, () => {
+      setPlaying((p) => (p === key ? null : p));
+      setStopFn(null);
+    });
     setPlaying(key);
     setStopFn(() => stop);
-    // auto stop after ~4.5s
-    setTimeout(() => {
-      setPlaying((p) => (p === key ? null : p));
-    }, 4500);
   };
 
   return (
@@ -54,7 +54,7 @@ const Sounds = () => {
         </div>
         <h1 className="text-5xl font-bold mb-3">เสียงประเภทต่างๆ</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          ทำความเข้าใจกับเสียงปอดแต่ละประเภท คลิกที่ปุ่ม Play เพื่อฟังเสียงตัวอย่างที่สังเคราะห์ขึ้น
+          ทำความเข้าใจกับเสียงปอดแต่ละประเภท คลิกที่ปุ่ม Play เพื่อฟังเสียงตัวอย่างจริงจากผู้ป่วย
         </p>
       </div>
 
@@ -79,7 +79,7 @@ const Sounds = () => {
                   <span className="font-bold text-foreground text-lg">{r.name}</span>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                      r.category === "ปกติ" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                      r.category === "GOOD" ? "bg-success/15 text-success" : r.category === "WARNING" ? "bg-warning/15 text-warning" : "bg-destructive/15 text-destructive"
                     }`}
                   >
                     {r.category}
@@ -106,7 +106,7 @@ const Sounds = () => {
       </div>
 
       <p className="text-center text-xs text-muted-foreground mt-6">
-        * เสียงตัวอย่างถูกสังเคราะห์ขึ้นเพื่อการศึกษาเท่านั้น ไม่ได้แทนเสียงจากผู้ป่วยจริง
+        * เสียงตัวอย่างจากผู้ป่วยจริงเพื่อใช้ประกอบการศึกษาเท่านั้น
       </p>
     </Layout>
   );
