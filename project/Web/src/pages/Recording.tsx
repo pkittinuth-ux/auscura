@@ -262,7 +262,7 @@ const Recording = () => {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-success truncate">{fileName}</p>
                   <p className="text-xs text-muted-foreground">
-                    เริ่มวิเคราะห์ใน ${count}s
+                    เริ่มวิเคราะห์ใน {count}s
                   </p>
                 </div>
               </div>
