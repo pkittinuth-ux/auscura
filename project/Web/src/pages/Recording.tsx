@@ -29,6 +29,7 @@ const Recording = () => {
   const [esp32Recording, setEsp32Recording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stoppingRef = useRef(false); // prevent double-stop on unmount
 
   // Clear session only on the very first step
   useEffect(() => {
@@ -69,39 +70,44 @@ const Recording = () => {
     }
   }, [idx, fileReady, mode]);
 
-  // Cleanup timer and stop recording if component unmounts while recording
+  // Cleanup timer only — do NOT auto-stop on every step navigation
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
-      if (sessionStorage.getItem("esp32_auto_mode") === "true") {
-        fetch(`${BACKEND_URL}/stop`).catch((e) => console.error("Unmount stop error:", e));
-      }
     };
   }, []);
 
-  const fetchRealAudio = async (stepIdx: number) => {
-    // Wait a bit for backend to save and filter the audio (1.5 seconds)
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    try {
-      console.log(`Fetching actual recorded audio from: ${BACKEND_URL}/clean_recording.wav`);
-      const res = await fetch(`${BACKEND_URL}/clean_recording.wav`);
-      if (res.ok) {
+  const fetchRealAudio = async (stepIdx: number): Promise<boolean> => {
+    const MAX_RETRIES = 10;
+    const RETRY_INTERVAL = 1000; // 1 second each
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_INTERVAL));
+      try {
+        console.log(`[Audio] Attempt ${attempt}/${MAX_RETRIES} — fetching clean_recording.wav`);
+        const res = await fetch(`${BACKEND_URL}/clean_recording.wav?t=${Date.now()}`);
+        if (!res.ok) {
+          console.warn(`[Audio] HTTP ${res.status}, retrying...`);
+          continue;
+        }
         const blob = await res.blob();
-        const name = `lung_sound.wav`;
-        // Clear old sessions to ensure only a single combined file is processed
+        console.log(`[Audio] Got ${(blob.size / 1024).toFixed(1)} KB`);
+        if (blob.size < 500) {
+          console.warn(`[Audio] File too small (${blob.size} B), retrying...`);
+          continue;
+        }
+        // Success — clear old session and save fresh
         sessionStorage.removeItem("auscura_session");
-        saveStepFile(stepIdx, blob, name);
-        console.log(`Saved single combined audio file for analysis.`);
-        setFileName(name);
-      } else {
-        throw new Error(`HTTP ${res.status}`);
+        saveStepFile(stepIdx, blob, "lung_sound.wav");
+        console.log(`[Audio] Saved combined audio OK.`);
+        setFileName("lung_sound.wav");
+        return true;
+      } catch (err) {
+        console.warn(`[Audio] Fetch error on attempt ${attempt}:`, err);
       }
-    } catch (error) {
-      console.error("Failed to fetch real audio from backend:", error);
-      // Fallback placeholder so we don't break the user flow
-      const mockBlob = new Blob(["esp32-stream-data-fallback"], { type: "audio/wav" });
-      saveStepFile(stepIdx, mockBlob, `lung_sound.wav`);
     }
+    console.error("[Audio] All retries exhausted.");
+    return false;
   };
 
   const handleStepTimeout = () => {
@@ -115,14 +121,52 @@ const Recording = () => {
   };
 
   const handleStopRecording = async () => {
+    if (stoppingRef.current) return;
+    stoppingRef.current = true;
     setIsProcessing(true);
+
+    const isEsp32Mode = sessionStorage.getItem("esp32_auto_mode") === "true";
+
     try {
-      console.log("Sending stop command to backend...");
-      await fetch(`${BACKEND_URL}/stop`);
-      // Save under step 0 so Analyzing.tsx analyzes only this single combined file
-      await fetchRealAudio(0);
+      if (isEsp32Mode) {
+        // ESP32 mode: send stop command and fetch the combined recording from backend
+        console.log("[Stop] Sending stop command to ESP32 via backend...");
+        await fetch(`${BACKEND_URL}/stop`);
+        const ok = await fetchRealAudio(0);
+        if (!ok) {
+          // No audio received from ESP32 — alert user, do NOT proceed to analyzing
+          setIsProcessing(false);
+          stoppingRef.current = false;
+          sessionStorage.removeItem("esp32_auto_mode");
+          alert("ไม่ได้รับไฟล์เสียงจากอุปกรณ์ กรุณาตรวจสอบการเชื่อมต่อ ESP32 และ Backend แล้วลองใหม่");
+          setMode("idle");
+          setEsp32Recording(false);
+          setFileReady(false);
+          return;
+        }
+      } else {
+        // Upload mode: user already has files in session — just verify session is intact
+        const raw = sessionStorage.getItem("auscura_session");
+        const session = raw ? JSON.parse(raw) : {};
+        const hasFiles = Object.keys(session).length > 0;
+        if (!hasFiles) {
+          console.warn("[Stop] No uploaded files found in session.");
+        }
+        console.log("[Stop] Upload mode — skipping backend call, using uploaded files.");
+      }
     } catch (e) {
-      console.error("Error stopping recording:", e);
+      console.error("[Stop] Unexpected error:", e);
+      if (isEsp32Mode) {
+        // Backend not reachable — alert and abort
+        setIsProcessing(false);
+        stoppingRef.current = false;
+        sessionStorage.removeItem("esp32_auto_mode");
+        alert("ไม่สามารถเชื่อมต่อ Backend ได้ (port 8888) กรุณาตรวจสอบและลองใหม่");
+        setMode("idle");
+        setEsp32Recording(false);
+        setFileReady(false);
+        return;
+      }
     } finally {
       setIsProcessing(false);
     }

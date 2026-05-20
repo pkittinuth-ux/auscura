@@ -12,17 +12,17 @@ interface Recipe {
 }
 
 const recipes: Record<string, Recipe> = {
-  vesicular: { fileUrl: "/audio/vesicular%20breath.m4a" },
-  normal: { fileUrl: "/audio/vesicular%20breath.m4a" },
-  bronchial: { fileUrl: "/audio/Bronchial%20breath%20sound.m4a" },
-  bronchovesicular: { fileUrl: "/audio/Bronchovesicular%20sound.m4a" },
-  stridor: { fileUrl: "/audio/Stridor%20sound.m4a" },
-  wheezing: { fileUrl: "/audio/Wheezing%20sound.m4a" },
-  rhonchi: { fileUrl: "/audio/Ronchi%20sound.m4a" },
-  fineCrackles: { fileUrl: "/audio/Crackles%20fine%20sound.m4a" },
-  coarseCrackles: { fileUrl: "/audio/Crackles%20coarse%20sound.m4a" },
-  pleuralRub: { fileUrl: "/audio/Pleural%20rub%20sound.m4a" },
-  squawks: { fileUrl: "/audio/Squawk%20sound.m4a" },
+  vesicular: { fileUrl: "/audio/vesicular%20breath.wav" },
+  normal: { fileUrl: "/audio/vesicular%20breath.wav" },       // no separate file — shares vesicular
+  bronchial: { fileUrl: "/audio/Bronchial%20breath%20sound.wav" },
+  bronchovesicular: { fileUrl: "/audio/Bronchovesicular%20sound.wav" },
+  stridor: { fileUrl: "/audio/Stridor%20sound.wav" },
+  wheezing: { fileUrl: "/audio/Wheezing%20sound.wav" },
+  rhonchi: { fileUrl: "/audio/Ronchi%20sound.wav" },
+  fineCrackles: { fileUrl: "/audio/Crackles%20fine%20sound.wav" },
+  coarseCrackles: { fileUrl: "/audio/Crackles%20coarse%20sound.wav" },
+  pleuralRub: { fileUrl: "/audio/Pleural%20rub%20sound.wav" },
+  squawks: { fileUrl: "/audio/Squawk%20sound.wav" },
 };
 
 const bufferCache: Record<string, AudioBuffer> = {};

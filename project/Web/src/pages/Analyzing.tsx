@@ -42,7 +42,9 @@ const Analyzing = () => {
         const { url, name } = session[step];
 
         setCurrentStep(i);
-        setStatus((s) => [...s, `กำลังวิเคราะห์ตำแหน่ง ${STEP_LABELS[step] ?? step + 1}...`]);
+        // For single-file ESP32 mode, show a friendlier label
+        const label = name === "lung_sound.wav" ? "เสียงปอด (รวมทุกตำแหน่ง)" : (STEP_LABELS[step] ?? `จุดที่ ${step + 1}`);
+        setStatus((s) => [...s, `กำลังวิเคราะห์ ${label}...`]);
 
         try {
           // Fetch the object URL back as a Blob then send to AI
@@ -53,14 +55,11 @@ const Analyzing = () => {
           const prediction = await analyzeWav(file, name);
 
           results.push({ step, filename: name, prediction });
-          setStatus((s) => [
-            ...s,
-            `✓ ตำแหน่ง ${STEP_LABELS[step] ?? step + 1}`,
-          ]);
+          setStatus((s) => [...s, `✓ ${label}: วิเคราะห์เสร็จแล้ว`]);
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
           results.push({ step, filename: name, prediction: null, error: msg });
-          setStatus((s) => [...s, `✗ ตำแหน่ง ${STEP_LABELS[step] ?? step + 1}: ${msg}`]);
+          setStatus((s) => [...s, `✗ ${label}: ไม่สามารถวิเคราะห์ได้`]);
         }
 
         setProgressPct(Math.round(((i + 1) / steps.length) * 100));

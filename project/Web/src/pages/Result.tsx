@@ -219,7 +219,8 @@ const Result = () => {
   const hasRealData = results.length > 0;
 
   const sessionRaw = typeof window !== "undefined" ? sessionStorage.getItem("auscura_session") : null;
-  const sessionData = sessionRaw ? JSON.parse(sessionRaw) : {};
+  const sessionData: Record<number, { url: string; name: string }> = sessionRaw ? JSON.parse(sessionRaw) : {};
+
 
   // Find the representative result to show in the detailed card
   const repResult = hasRealData
@@ -279,7 +280,7 @@ const Result = () => {
         </div>
 
         {/* Step Result Details (Single Card Case) */}
-        {/* {hasRealData && repResult && (
+        {hasRealData && repResult && (
           <div className="mb-8 text-left animate-fade-up" style={{ animationDelay: "0.2s" }}>
             <h2 className="text-2xl font-bold mb-4 px-2 text-foreground text-center">รายละเอียดเสียงบันทึกปอด</h2>
             <div className="max-w-md mx-auto">
@@ -288,9 +289,8 @@ const Result = () => {
 
                 return (
                   <div
-                    className={`bg-card rounded-2xl p-6 border shadow-elegant flex flex-col gap-4 ${
-                      repResult.prediction ? SEV_BG[repResult.prediction.severity] : "border-border"
-                    }`}
+                    className={`bg-card rounded-2xl p-6 border shadow-elegant flex flex-col gap-4 ${repResult.prediction ? SEV_BG[repResult.prediction.severity] : "border-border"
+                      }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -322,7 +322,7 @@ const Result = () => {
               })()}
             </div>
           </div>
-        )} */}
+        )}
 
         <div className="mt-4 text-center">
           <Button

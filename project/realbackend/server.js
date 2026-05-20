@@ -21,6 +21,14 @@ const server = http.createServer((req, res) => {
   // เพิ่ม CORS Header
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
   if (req.url.startsWith('/start')) {
     console.log('\n[HTTP API] Received /start from frontend. Broadcasting "start" to ESP32...');
@@ -46,15 +54,26 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (req.url === '/recording.wav' || req.url === '/clean_recording.wav') {
-    const filename = req.url.replace('/', '');
+  if (req.url.startsWith('/recording.wav') || req.url.startsWith('/clean_recording.wav')) {
+    // Parse filename without query string
+    const filename = req.url.split('?')[0].replace('/', '');
     const wavPath = path.join(__dirname, filename);
     if (fs.existsSync(wavPath)) {
+      res.setHeader('Cache-Control', 'no-store');
       res.writeHead(200, { 'Content-Type': 'audio/wav' });
       fs.createReadStream(wavPath).pipe(res);
     } else {
-      res.writeHead(404);
-      res.end('File not found');
+      // Fallback: if clean version doesn't exist yet, try raw recording
+      const fallbackPath = path.join(__dirname, 'recording.wav');
+      if (filename === 'clean_recording.wav' && fs.existsSync(fallbackPath)) {
+        console.log('[Fallback] clean_recording.wav not ready, serving recording.wav');
+        res.setHeader('Cache-Control', 'no-store');
+        res.writeHead(200, { 'Content-Type': 'audio/wav' });
+        fs.createReadStream(fallbackPath).pipe(res);
+      } else {
+        res.writeHead(404);
+        res.end('File not found');
+      }
     }
     return;
   }
