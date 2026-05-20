@@ -1,7 +1,7 @@
 import { useNavigate, useParams, Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Smile, Meh, Frown, AlertOctagon, RotateCcw, Home, Activity } from "lucide-react";
+import { Smile, Meh, Frown, AlertOctagon, RotateCcw, Home, Activity, Play } from "lucide-react";
 import { loadResults, type StepResult } from "@/lib/aiService";
 
 type ResultType = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "E + F" | "E + G" | "E + H" | "F + H" | "G + I" | "D + A" | "D + B" | "D + C" | "D + E" | "D + F" | "D + G" | "D + H" | "D + I" | "D + J" | "J + G" | "error";
@@ -313,8 +313,9 @@ const Result = () => {
                       )}
                     </div>
                     {audioUrl && (
-                      <div className="mt-2 pt-2 border-t border-border/50">
-                        <audio controls src={audioUrl} className="w-full h-11" />
+                      <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-center gap-2 py-3 px-4 bg-muted/50 rounded-xl border border-dashed border-border text-muted-foreground select-none">
+                        <Play className="w-4 h-4 opacity-40" />
+                        <span className="text-xs font-semibold tracking-wider uppercase">Working On</span>
                       </div>
                     )}
                   </div>

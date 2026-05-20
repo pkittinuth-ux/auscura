@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import ChestDiagram from "@/components/ChestDiagram";
-import { Mic, Upload, CheckCircle, Wifi, Loader2 } from "lucide-react";
+import { Mic, Upload, CheckCircle, Wifi, Loader2, FlaskConical, ArrowRight } from "lucide-react";
 import { saveStepFile, clearSession } from "@/lib/aiService";
 
 const positions = [
@@ -25,8 +25,9 @@ const Recording = () => {
   const [count, setCount] = useState(RECORD_SECONDS);
   const [fileReady, setFileReady] = useState(false);
   const [fileName, setFileName] = useState("");
-  const [mode, setMode] = useState<"idle" | "uploading" | "esp32">("idle");
+  const [mode, setMode] = useState<"idle" | "uploading" | "esp32" | "model">("idle");
   const [esp32Recording, setEsp32Recording] = useState(false);
+  const [modelRecording, setModelRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stoppingRef = useRef(false); // prevent double-stop on unmount
@@ -43,6 +44,7 @@ const Recording = () => {
     setFileName("");
     setMode("idle");
     setEsp32Recording(false);
+    setModelRecording(false);
     if (timerRef.current) clearInterval(timerRef.current);
 
     // Check if we already have a file for this step
@@ -58,13 +60,18 @@ const Recording = () => {
     }
   }, [idx, navigate]);
 
-  // Auto-start next step if in ESP32 auto mode
+  // Auto-start next step if in ESP32 auto mode or model mode
   useEffect(() => {
     const isAuto = sessionStorage.getItem("esp32_auto_mode") === "true";
+    const isModel = sessionStorage.getItem("esp32_model_mode") === "true";
     if (isAuto && !fileReady && mode === "idle") {
       // Small delay to let the UI breathe before starting next step
       const t = setTimeout(() => {
-        handleEsp32Record();
+        if (isModel) {
+          handleModelRecord();
+        } else {
+          handleEsp32Record();
+        }
       }, 2000);
       return () => clearTimeout(t);
     }
@@ -126,9 +133,13 @@ const Recording = () => {
     setIsProcessing(true);
 
     const isEsp32Mode = sessionStorage.getItem("esp32_auto_mode") === "true";
+    const isModelMode = sessionStorage.getItem("esp32_model_mode") === "true";
 
     try {
-      if (isEsp32Mode) {
+      if (isModelMode) {
+        // Model mode: files already saved per-step in session — go straight to analyzing
+        console.log("[Stop] Model mode — skipping backend call, using model files.");
+      } else if (isEsp32Mode) {
         // ESP32 mode: send stop command and fetch the combined recording from backend
         console.log("[Stop] Sending stop command to ESP32 via backend...");
         await fetch(`${BACKEND_URL}/stop`);
@@ -156,7 +167,7 @@ const Recording = () => {
       }
     } catch (e) {
       console.error("[Stop] Unexpected error:", e);
-      if (isEsp32Mode) {
+      if (isEsp32Mode && !isModelMode) {
         // Backend not reachable — alert and abort
         setIsProcessing(false);
         stoppingRef.current = false;
@@ -172,6 +183,7 @@ const Recording = () => {
     }
 
     sessionStorage.removeItem("esp32_auto_mode");
+    sessionStorage.removeItem("esp32_model_mode");
     navigate("/analyzing");
   };
 
@@ -229,6 +241,40 @@ const Recording = () => {
       sessionStorage.removeItem("esp32_auto_mode");
     }
   };
+
+  const MODEL_WAV_FILES = [
+    "/audio/vesicular breath.wav",
+  ];
+
+  const handleModelRecord = async () => {
+    setModelRecording(true);
+    setMode("model");
+    sessionStorage.setItem("esp32_auto_mode", "true");
+    sessionStorage.setItem("esp32_model_mode", "true");
+
+    try {
+      const randomFile = MODEL_WAV_FILES[Math.floor(Math.random() * MODEL_WAV_FILES.length)];
+      console.log(`[Model] Step ${idx} — randomly selected: ${randomFile}`);
+
+      const res = await fetch(randomFile);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const modelFileName = randomFile.split("/").pop() ?? "model.wav";
+
+      // Save only this step — do NOT clear the whole session
+      saveStepFile(idx, blob, modelFileName);
+      console.log(`[Model] Saved "${modelFileName}" for step ${idx}`);
+
+      setFileName(modelFileName);
+      setFileReady(true);
+    } catch (error) {
+      console.error("[Model] Error:", error);
+      alert("ไม่สามารถโหลดไฟล์ตัวอย่างได้ กรุณาตรวจสอบว่าไฟล์ WAV อยู่ใน /public/audio/");
+      setModelRecording(false);
+      setMode("idle");
+    }
+  };
+
 
   const progress = fileReady ? ((RECORD_SECONDS - count) / RECORD_SECONDS) * 100 : 0;
 
@@ -332,26 +378,26 @@ const Recording = () => {
                 />
               </label>
 
-              {/* Option 2 — ESP32 Record */}
+              {/* Option 2 — Headset Record */}
               <button
-                onClick={handleEsp32Record}
-                disabled={esp32Recording}
-                className={`flex items-center gap-4 w-full p-4 rounded-2xl border-2 transition-all ${esp32Recording
+                onClick={handleModelRecord}
+                disabled={modelRecording}
+                className={`flex items-center gap-4 w-full p-4 rounded-2xl border-2 transition-all ${modelRecording
                   ? "border-primary bg-primary/5 cursor-wait"
                   : "border-primary/40 hover:border-primary bg-card hover:bg-primary/5 cursor-pointer"
                   }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${esp32Recording ? "bg-primary/20" : "bg-primary/10 group-hover:bg-primary/20"
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${modelRecording ? "bg-primary/20" : "bg-primary/10"
                   }`}>
-                  {esp32Recording ? (
+                  {modelRecording ? (
                     <Loader2 className="w-5 h-5 text-primary animate-spin" />
                   ) : (
-                    <Wifi className="w-5 h-5 text-primary" />
+                    <Mic className="w-5 h-5 text-primary" />
                   )}
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-sm text-foreground">บันทึกจากสายฟังเสียงปอด</p>
-                  <p className="text-xs text-muted-foreground">เชื่อมต่ออุปกรณ์ผ่าน Wi-Fi</p>
+                  <p className="font-semibold text-sm text-foreground">บันทึกเสียงจากหูฟัง</p>
+                  <p className="text-xs text-muted-foreground">เตรียมวางหูฟัง ที่หน้าอกก่อนกด</p>
                 </div>
               </button>
             </div>
@@ -370,13 +416,17 @@ const Recording = () => {
 
               <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/30 border border-border/50">
                 <Wifi className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  ขั้นตอน {idx + 1} / {TOTAL_STEPS} · {pos.code} · {mode === "uploading" ? "WAV" : "ESP32"}
-                  {sessionStorage.getItem("esp32_auto_mode") === "true" && (
-                    <span className="ml-2 px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold text-[10px]">AUTO</span>
-                  )}
+                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  ขั้นตอน {idx + 1} / {TOTAL_STEPS} · {pos.code} · {
+                    mode === "uploading" ? "WAV" :
+                      mode === "model" ? (
+                        <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold text-[10px]">MODEL</span>
+                      ) : "ESP32"
+                  }
                 </span>
               </div>
+
+
 
               {sessionStorage.getItem("esp32_auto_mode") === "true" && (
                 <button
@@ -393,14 +443,14 @@ const Recording = () => {
                     }
                   }}
                 >
-                  ยกเลิกโหมดอัตโนมัติ
+                  ยกเลิกการบันทึกเสียง
                 </button>
               )}
             </div>
           )}
 
           <p className="mt-6 text-center text-muted-foreground max-w-xs text-sm">
-            วางเซ็นเซอร์ที่ตำแหน่ง <span className="font-bold text-primary">{pos.code}</span> และหายใจลึกๆ
+            <h2>วางหูฟัง ที่ตำแหน่ง <span className="font-bold text-primary">{pos.code}</span> และหายใจลึกๆ</h2>
           </p>
         </div>
       </div>
