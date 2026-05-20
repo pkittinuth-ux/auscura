@@ -55,7 +55,7 @@ const Analyzing = () => {
           results.push({ step, filename: name, prediction });
           setStatus((s) => [
             ...s,
-            `✓ ตำแหน่ง ${STEP_LABELS[step] ?? step + 1}: ${prediction.label} – ${prediction.type}`,
+            `✓ ตำแหน่ง ${STEP_LABELS[step] ?? step + 1}`,
           ]);
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
@@ -87,7 +87,7 @@ const Analyzing = () => {
           const rank = ranks[r.prediction.severity] ?? 0;
           if (rank === worstRank) {
             worstLabel = r.prediction.label;
-            break; 
+            break;
           }
         }
       }
@@ -151,8 +151,8 @@ const Analyzing = () => {
               )}
               <span className={
                 line.startsWith("✓") ? "text-success" :
-                line.startsWith("✗") ? "text-destructive" :
-                "text-muted-foreground"
+                  line.startsWith("✗") ? "text-destructive" :
+                    "text-muted-foreground"
               }>
                 {line.replace(/^[✓✗] /, "")}
               </span>

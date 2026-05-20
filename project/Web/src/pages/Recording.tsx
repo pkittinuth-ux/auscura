@@ -13,8 +13,8 @@ const positions = [
 ];
 
 const TOTAL_STEPS = 4;
-const RECORD_SECONDS = 20;
-const ESP32_URL = "http://192.168.1.100"; // ESP32 default IP
+const RECORD_SECONDS = 5;
+const BACKEND_URL = `http://${window.location.hostname}:8888`;
 
 const Recording = () => {
   const { step = "0" } = useParams();
@@ -27,6 +27,7 @@ const Recording = () => {
   const [fileName, setFileName] = useState("");
   const [mode, setMode] = useState<"idle" | "uploading" | "esp32">("idle");
   const [esp32Recording, setEsp32Recording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Clear session only on the very first step
@@ -68,31 +69,88 @@ const Recording = () => {
     }
   }, [idx, fileReady, mode]);
 
+  // Cleanup timer and stop recording if component unmounts while recording
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (sessionStorage.getItem("esp32_auto_mode") === "true") {
+        fetch(`${BACKEND_URL}/stop`).catch((e) => console.error("Unmount stop error:", e));
+      }
+    };
+  }, []);
+
+  const fetchRealAudio = async (stepIdx: number) => {
+    // Wait a bit for backend to save and filter the audio (1.5 seconds)
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      console.log(`Fetching actual recorded audio from: ${BACKEND_URL}/clean_recording.wav`);
+      const res = await fetch(`${BACKEND_URL}/clean_recording.wav`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const name = `lung_sound.wav`;
+        // Clear old sessions to ensure only a single combined file is processed
+        sessionStorage.removeItem("auscura_session");
+        saveStepFile(stepIdx, blob, name);
+        console.log(`Saved single combined audio file for analysis.`);
+        setFileName(name);
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
+    } catch (error) {
+      console.error("Failed to fetch real audio from backend:", error);
+      // Fallback placeholder so we don't break the user flow
+      const mockBlob = new Blob(["esp32-stream-data-fallback"], { type: "audio/wav" });
+      saveStepFile(stepIdx, mockBlob, `lung_sound.wav`);
+    }
+  };
+
+  const handleStepTimeout = () => {
+    if (idx < TOTAL_STEPS - 1) {
+      // Move to next step without stopping recording
+      navigate(`/recording/${idx + 1}`);
+    } else {
+      // Final step: stop recording and fetch the audio
+      handleStopRecording();
+    }
+  };
+
+  const handleStopRecording = async () => {
+    setIsProcessing(true);
+    try {
+      console.log("Sending stop command to backend...");
+      await fetch(`${BACKEND_URL}/stop`);
+      // Save under step 0 so Analyzing.tsx analyzes only this single combined file
+      await fetchRealAudio(0);
+    } catch (e) {
+      console.error("Error stopping recording:", e);
+    } finally {
+      setIsProcessing(false);
+    }
+
+    sessionStorage.removeItem("esp32_auto_mode");
+    navigate("/analyzing");
+  };
+
   // Auto-advance countdown after file is ready
   useEffect(() => {
     if (!fileReady) return;
     setCount(RECORD_SECONDS);
-    timerRef.current = setInterval(() => {
-      setCount((c) => {
-        if (c <= 1) {
-          clearInterval(timerRef.current!);
 
-          // Determine next destination
-          if (idx < TOTAL_STEPS - 1) {
-            // Move to next step (record/0 -> record/1 -> ...)
-            setTimeout(() => navigate(`/recording/${idx + 1}`), 600);
-          } else {
-            // All steps done, clear auto mode and go to analyzing
-            sessionStorage.removeItem("esp32_auto_mode");
-            setTimeout(() => navigate("/analyzing"), 800);
-          }
-          return 0;
-        }
-        return c - 1;
-      });
+    let currentCount = RECORD_SECONDS;
+    timerRef.current = setInterval(() => {
+      currentCount -= 1;
+      setCount(currentCount);
+
+      if (currentCount <= 0) {
+        clearInterval(timerRef.current!);
+        handleStepTimeout();
+      }
     }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [fileReady, idx, navigate]);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [fileReady, idx]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -113,18 +171,9 @@ const Recording = () => {
     sessionStorage.setItem("esp32_auto_mode", "true");
 
     try {
-      // Signal ESP32 to start recording (Displaying start signal)
+      // Signal ESP32 via backend to start recording
       console.log(`Signaling ESP32 to start step ${idx}`);
-
-      // Sending signal via simple fetch. User will handle ESP32 side logic.
-      // We use no-cors to avoid issues with ESP32 local server restrictions.
-      await fetch(`${ESP32_URL}/start?step=${idx}`, { mode: 'no-cors' });
-
-      // Save a placeholder step file so the analysis page knows we have data for this step.
-      // The actual audio processing/storage might be handled by ESP32 -> Backend directly.
-      const mockBlob = new Blob(["esp32-stream-data"], { type: "audio/wav" });
-      const name = `esp32_step${idx}.wav`;
-      saveStepFile(idx, mockBlob, name);
+      await fetch(`${BACKEND_URL}/start`);
 
       setFileName(`record/${idx}`);
       setFileReady(true);
@@ -193,9 +242,17 @@ const Recording = () => {
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <Mic className="w-6 h-6 text-primary mb-1" />
               <div className="text-6xl font-bold tabular-nums bg-clip-text text-transparent bg-gradient-to-r from-cyan-500 to-emerald-400">
-                {fileReady ? count : "–"}
+                {isProcessing ? (
+                  <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                ) : fileReady ? (
+                  count
+                ) : (
+                  "–"
+                )}
               </div>
-              <div className="text-xs text-muted-foreground mt-1">วินาที</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {isProcessing ? "กำลังดึงเสียง..." : "วินาที"}
+              </div>
             </div>
           </div>
 
@@ -280,11 +337,16 @@ const Recording = () => {
               {sessionStorage.getItem("esp32_auto_mode") === "true" && (
                 <button
                   className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-4"
-                  onClick={() => {
+                  onClick={async () => {
                     sessionStorage.removeItem("esp32_auto_mode");
                     setMode("idle");
                     setEsp32Recording(false);
                     setFileReady(false);
+                    try {
+                      await fetch(`${BACKEND_URL}/stop`);
+                    } catch (e) {
+                      console.error(e);
+                    }
                   }}
                 >
                   ยกเลิกโหมดอัตโนมัติ

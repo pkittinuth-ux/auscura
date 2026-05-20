@@ -22,6 +22,30 @@ const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
+  if (req.url.startsWith('/start')) {
+    console.log('\n[HTTP API] Received /start from frontend. Broadcasting "start" to ESP32...');
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send('start');
+      }
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'sent', command: 'start' }));
+    return;
+  }
+
+  if (req.url.startsWith('/stop') || req.url.startsWith('/end')) {
+    console.log('\n[HTTP API] Received /stop or /end from frontend. Broadcasting "stop" to ESP32...');
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send('stop');
+      }
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'sent', command: 'stop' }));
+    return;
+  }
+
   if (req.url === '/recording.wav' || req.url === '/clean_recording.wav') {
     const filename = req.url.replace('/', '');
     const wavPath = path.join(__dirname, filename);
@@ -47,38 +71,63 @@ wss.on('connection', (ws) => {
 
   ws.on('message', (data, isBinary) => {
     if (!isBinary) {
-      const command = data.toString();
+      const command = data.toString().trim();
       if (command === 'start') {
         console.log('\n[Recording Started] Receiving audio via WebSocket...');
         isRecording = true;
         audioChunks = [];
         totalBytesReceived = 0;
+
+        // Broadcast 'start' to other clients (e.g. ESP32)
+        wss.clients.forEach(client => {
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send('start');
+          }
+        });
+      } else if (command === 'stop') {
+        console.log('\n[Recording Stop Command] Broadcasting "stop" to ESP32...');
+        // Broadcast 'stop' to other clients (e.g. ESP32)
+        wss.clients.forEach(client => {
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send('stop');
+          }
+        });
       } else if (command === 'end') {
         if (!isRecording) return;
         isRecording = false;
         console.log(`\n[Recording Finished] Total received: ${(totalBytesReceived / 1024).toFixed(2)} KB`);
-        
+
         const rawWavPath = path.join(__dirname, 'recording.wav');
         const cleanWavPath = path.join(__dirname, 'clean_recording.wav');
-        
+
         const pcmBuffer = Buffer.concat(audioChunks);
         const wavBuffer = pcmToWav(pcmBuffer, SAMPLE_RATE, CHANNELS, BIT_DEPTH);
-        
+
         fs.writeFileSync(rawWavPath, wavBuffer);
         console.log(`[Saved] recording.wav`);
-        
+
         // เรียกใช้ Python Script เพื่อกรองเสียง (Bandpass Filter 50-2500Hz)
         console.log('[Processing] Applying Butterworth Bandpass Filter (50Hz - 2500Hz)...');
         exec(`python filter_audio.py "${rawWavPath}" "${cleanWavPath}"`, (error, stdout, stderr) => {
           if (error) {
             console.error(`[Filter Error] ${error.message}`);
-            ws.send(JSON.stringify({ status: 'saved', file: 'recording.wav', filter_error: true }));
+            const errorPayload = JSON.stringify({ status: 'saved', file: 'recording.wav', filter_error: true });
+            wss.clients.forEach(client => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(errorPayload);
+              }
+            });
             return;
           }
           console.log(`[Filtered] clean_recording.wav created!`);
-          
+
           // ส่งสัญญาณกลับไปบอก Client พร้อมแนบไฟล์ที่กรองแล้ว
-          ws.send(JSON.stringify({ status: 'saved', raw_file: 'recording.wav', clean_file: 'clean_recording.wav' }));
+          const successPayload = JSON.stringify({ status: 'saved', raw_file: 'recording.wav', clean_file: 'clean_recording.wav' });
+          wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(successPayload);
+            }
+          });
         });
       }
     } else {

@@ -221,6 +221,16 @@ const Result = () => {
   const sessionRaw = typeof window !== "undefined" ? sessionStorage.getItem("auscura_session") : null;
   const sessionData = sessionRaw ? JSON.parse(sessionRaw) : {};
 
+  // Find the representative result to show in the detailed card
+  const repResult = hasRealData
+    ? [...results].sort((a, b) => {
+      const rank: Record<string, number> = { Good: 0, Warning: 1, Bad: 2 };
+      const rankA = a.prediction ? (rank[a.prediction.severity] ?? 0) : -1;
+      const rankB = b.prediction ? (rank[b.prediction.severity] ?? 0) : -1;
+      return rankB - rankA;
+    })[0]
+    : null;
+
   return (
     <Layout>
       <div className="max-w-3xl mx-auto animate-fade-up">
@@ -268,52 +278,51 @@ const Result = () => {
           )}
         </div>
 
-        {/* Step Results */}
-        {hasRealData && (
+        {/* Step Result Details (Single Card Case) */}
+        {/* {hasRealData && repResult && (
           <div className="mb-8 text-left animate-fade-up" style={{ animationDelay: "0.2s" }}>
-            <h2 className="text-2xl font-bold mb-4 px-2 text-foreground">รายละเอียดเสียงแต่ละจุด</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {results.map((res, i) => {
-                const audioUrl = sessionData[res.step]?.url;
+            <h2 className="text-2xl font-bold mb-4 px-2 text-foreground text-center">รายละเอียดเสียงบันทึกปอด</h2>
+            <div className="max-w-md mx-auto">
+              {(() => {
+                const audioUrl = sessionData[repResult.step]?.url || Object.values(sessionData)[0]?.url;
 
                 return (
                   <div
-                    key={i}
-                    className={`bg-card rounded-2xl p-5 border shadow-sm flex flex-col gap-3 ${
-                      res.prediction ? SEV_BG[res.prediction.severity] : "border-border"
+                    className={`bg-card rounded-2xl p-6 border shadow-elegant flex flex-col gap-4 ${
+                      repResult.prediction ? SEV_BG[repResult.prediction.severity] : "border-border"
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="text-sm font-semibold text-muted-foreground mb-1">
-                          {STEP_LABELS[res.step] || `จุดที่ ${res.step + 1}`}
+                          ตรวจผ่านสายฟังเสียงปอด (รวมทุกตำแหน่ง)
                         </div>
-                        <div className="text-lg font-bold">
-                          {res.prediction ? res.prediction.type : res.error ? "ข้อผิดพลาด" : "ไม่ทราบผล"}
+                        <div className="text-xl font-bold">
+                          {repResult.prediction ? repResult.prediction.type : repResult.error ? "ข้อผิดพลาด" : "ไม่ทราบผล"}
                         </div>
-                        {res.prediction && (
-                          <div className={`text-sm font-medium ${SEV_COLOR[res.prediction.severity]}`}>
-                            {res.prediction.label}
+                        {repResult.prediction && (
+                          <div className={`text-sm font-semibold mt-1 ${SEV_COLOR[repResult.prediction.severity]}`}>
+                            {repResult.prediction.label}
                           </div>
                         )}
                       </div>
-                      {res.prediction && (
-                        <div className={`p-2 rounded-full ${res.prediction.severity === "Bad" ? "bg-destructive/20 text-destructive" : res.prediction.severity === "Warning" ? "bg-yellow-500/20 text-yellow-500" : "bg-success/20 text-success"}`}>
-                          <Activity className="w-5 h-5" />
+                      {repResult.prediction && (
+                        <div className={`p-2.5 rounded-full ${repResult.prediction.severity === "Bad" ? "bg-destructive/20 text-destructive" : repResult.prediction.severity === "Warning" ? "bg-yellow-500/20 text-yellow-500" : "bg-success/20 text-success"}`}>
+                          <Activity className="w-6 h-6" />
                         </div>
                       )}
                     </div>
                     {audioUrl && (
-                      <div className="mt-2">
-                        <audio controls src={audioUrl} className="w-full h-10" />
+                      <div className="mt-2 pt-2 border-t border-border/50">
+                        <audio controls src={audioUrl} className="w-full h-11" />
                       </div>
                     )}
                   </div>
                 );
-              })}
+              })()}
             </div>
           </div>
-        )}
+        )} */}
 
         <div className="mt-4 text-center">
           <Button

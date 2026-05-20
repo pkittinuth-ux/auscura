@@ -198,6 +198,10 @@ def load_model_file(path='lung_model.joblib'):
     abs_path = os.path.join(script_dir, path)
     if os.path.exists(abs_path):
         return joblib.load(abs_path)
+    # Fallback to Original/ directory
+    fallback_path = os.path.join(script_dir, 'Original', path)
+    if os.path.exists(fallback_path):
+        return joblib.load(fallback_path)
     return None
 
 if __name__ == "__main__":
