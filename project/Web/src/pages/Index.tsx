@@ -23,7 +23,7 @@ const Index = () => {
           </div>
           <h1 className="text-6xl font-bold leading-[1.05] tracking-tight text-foreground mb-6">
             ตรวจเสียงปอดของคุณ<br />
-            <span className="bg-gradient-to-r from-cyan-500 to-emerald-400 bg-clip-text text-transparent">ด้วย AI ที่แม่นยำ</span>
+            <span className="bg-gradient-to-r from-primary to-yellow-800 bg-clip-text text-transparent">ด้วย AI ที่แม่นยำ</span>
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-xl">
             Auscura ใช้เซ็นเซอร์รับเสียงปอดร่วมกับปัญญาประดิษฐ์

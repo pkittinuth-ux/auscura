@@ -23,7 +23,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       <header className="relative w-full z-50">
         <div className="mx-auto flex h-24 items-center justify-between px-12" style={{ maxWidth: 1440 }}>
           <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="Auscura logo" className="h-14 w-auto" height={56} />
+            <img src={logo} alt="Auscura logo" className="h-40 w-auto" />
           </Link>
           <nav className="flex items-center gap-2 bg-card/80 backdrop-blur-md rounded-full p-1.5 shadow-soft border border-border/50">
             <Link
@@ -49,7 +49,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       <footer className="relative border-t border-border/50 mt-16 bg-gradient-to-b from-transparent to-secondary/40">
         <div className="mx-auto px-12 py-10 grid grid-cols-1 md:grid-cols-3 gap-8" style={{ maxWidth: 1440 }}>
           <div className="flex items-start gap-3">
-            <img src={logo} alt="Auscura" className="h-12 w-auto" />
+            <img src={logo} alt="Auscura logo" className="h-32 w-auto" height={40} />
             <div>
               <div className="font-bold text-foreground text-lg">Auscura</div>
               <div className="text-sm text-muted-foreground mt-1">

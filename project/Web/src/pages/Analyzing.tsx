@@ -250,7 +250,8 @@ const Analyzing = () => {
           </div>
         </div>
 
-        <h1 className="text-5xl font-bold tabular-nums bg-clip-text text-transparent bg-gradient-to-r from-cyan-500 to-emerald-400 mb-2">
+        <h1 className="text-5xl font-bold tabular-nums bg-clip-text text-transparent bg-gradient-to-r from-primary to-yellow-800
+         mb-2">
           กำลังวิเคราะห์
         </h1>
         <p className="text-lg text-muted-foreground mb-8">

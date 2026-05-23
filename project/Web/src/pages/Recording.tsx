@@ -265,7 +265,7 @@ const Recording = () => {
       saveStepFile(idx, blob, modelFileName);
       console.log(`[Model] Saved "${modelFileName}" for step ${idx}`);
 
-      setFileName(modelFileName);
+      setFileName("กำลังฟังเสียงปอด");
       setFileReady(true);
     } catch (error) {
       console.error("[Model] Error:", error);

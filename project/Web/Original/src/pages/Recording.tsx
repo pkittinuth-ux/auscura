@@ -94,7 +94,7 @@ const Recording = () => {
             </div>
           </div>
           <p className="mt-8 text-center text-muted-foreground max-w-xs">
-            วางเซ็นเซอร์ที่ตำแหน่ง <span className="font-bold text-primary">{pos.code}</span> และหายใจลึกๆ
+            <h2>วางหูฟัง ที่ตำแหน่ง <span className="font-bold text-primary">{pos.code}</span> และหายใจลึกๆ</h2>
           </p>
         </div>
       </div>
